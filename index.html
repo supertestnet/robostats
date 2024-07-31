@@ -269,7 +269,7 @@
                             console.log( 'retrying...' );
                             return eLoop();
                         }
-                        return events;
+                        return events.reverse();
                     } catch( e ) {
                         console.log( 'retrying...' );
                         return eLoop();
