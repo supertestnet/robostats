@@ -3,6 +3,7 @@ var nobleSecp256k1 = require( 'noble-secp256k1' );
 var sha256 = nobleSecp256k1.utils.sha256;
 var bytesToHex = bytes => bytes.reduce( ( str, byte ) => str + byte.toString( 16 ).padStart( 2, "0" ), "" );
 
+//make sure your password is 64 characters of hex (i.e. a 32 byte bitcoin private key)
 var password = '';
 var pubkey = nobleSecp256k1.getPublicKey( password, true ).substring( 2 );
 var relay = `wss://junxingwang.org`;
