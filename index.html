@@ -263,7 +263,7 @@
                 var authors = [ "99958a1b64b979a3cb69f6fd2fe77b801156122a14a5691f34632a206795e0ee" ];
                 var eLoop = async () => {
                     try {
-                        var events = await getEvents( relay, ids, authors );
+                        var events = await getEvents( relay, ids, authors, [ 1 ] );
                         // var events = [{"content":"{\"sum\":0.52456104,\"cum\":66.18859599,\"buy\":39,\"sel\":70}","created_at":1722360566,"id":"ced3962f34ad38f408bc27183c582432678f2800e05156ccf440b4559c60e0a9","kind":1,"pubkey":"99958a1b64b979a3cb69f6fd2fe77b801156122a14a5691f34632a206795e0ee","sig":"423aad7ae6e0c747adf792055b2cfad2f64798aa161bab2d7f9f2873041edfc8bfdf2c90b02c80d5f8385d4b09fd012f4a43a353d8f0dd69c9625b12cb1172d8","tags":[]}];
                         if ( !events.length || !events ) {
                             console.log( 'retrying...' );
