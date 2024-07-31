@@ -2,6 +2,7 @@ import requests
 from flask import Flask, request, url_for, make_response, send_file
 app = Flask(__name__)
 
+#make sure your password matches the one in index.js
 password=""
 
 proxies = {
