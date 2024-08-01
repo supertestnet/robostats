@@ -127,6 +127,19 @@
                 }
                 return await loop();
             }
+
+            var findClosestSummary = date => {
+                var timestamp = Math.floor( new Date( date ).getTime() / 1000 );
+                var idx = -1;
+                var closest_time = 0;
+                var i; for ( i=0; i<summaries.length; i++ ) {
+                    if ( Math.abs( summaries[ i ].time - timestamp ) < Math.abs( closest_time - timestamp ) ) {
+                        idx = i;
+                        closest_time = summaries[ i ].time;
+                    }
+                }
+                return idx;
+            }
         </script>
         <style>
             * {
@@ -186,55 +199,43 @@
         <p class="loading">loading...</p>
         <canvas id="cum_contracts" style="width:100%;max-width:600px" class="hidden"></canvas>
         <script>
+            var charts = [];
             var xValues = [];
             var btc_price = 0;
             var num_of_values = 12;
 
-            var points = [{
-                time: 1645401600,
-                cum: 0,
-                buy: 0,
-                sel: 0,
-            },
-//            {
-//                time: 1717113600,
-//                cum: 449.624,
-//                buy: 0,
-//                sel: 0,
-//            },
-            {
-                time: 1688169600,
-                cum: 237.771,
-                buy: 10873,
-                sel: 10872,
-            }];
+            var summaries = [{"this_summarys_date":"2022-01","volume_this_month":0,"contracts_this_month":0,"eur_contracts_this_month":0,"eur_volume_this_month":0,"usd_contracts_this_month":0,"usd_volume_this_month":0,"cad_contracts_this_month":0,"cad_volume_this_month":0,"gbp_contracts_this_month":0,"gbp_volume_this_month":0,"btc_contracts_this_month":0,"btc_volume_this_month":0,"oth_contracts_this_month":0,"oth_volume_this_month":0},{"this_summarys_date":"2022-03","volume_this_month":0.37490515,"contracts_this_month":282,"eur_contracts_this_month":184,"eur_volume_this_month":0.24633512,"usd_contracts_this_month":56,"usd_volume_this_month":0.0788387,"cad_contracts_this_month":11,"cad_volume_this_month":0.03881671,"gbp_contracts_this_month":5,"gbp_volume_this_month":0.00234604,"btc_contracts_this_month":5,"btc_volume_this_month":0.00060202,"oth_contracts_this_month":21,"oth_volume_this_month":0.00796656},{"this_summarys_date":"2022-02","volume_this_month":0.03684543,"contracts_this_month":43,"eur_contracts_this_month":18,"eur_volume_this_month":0.02120227,"usd_contracts_this_month":7,"usd_volume_this_month":0.0026764,"cad_contracts_this_month":3,"cad_volume_this_month":0.00847179,"gbp_contracts_this_month":2,"gbp_volume_this_month":0.00207694,"btc_contracts_this_month":9,"btc_volume_this_month":0.0009,"oth_contracts_this_month":4,"oth_volume_this_month":0.00151803},{"this_summarys_date":"2022-03","volume_this_month":0.37490515,"contracts_this_month":282,"eur_contracts_this_month":184,"eur_volume_this_month":0.24633512,"usd_contracts_this_month":56,"usd_volume_this_month":0.0788387,"cad_contracts_this_month":11,"cad_volume_this_month":0.03881671,"gbp_contracts_this_month":5,"gbp_volume_this_month":0.00234604,"btc_contracts_this_month":5,"btc_volume_this_month":0.00060202,"oth_contracts_this_month":21,"oth_volume_this_month":0.00796656},{"this_summarys_date":"2022-04","volume_this_month":0.73769088,"contracts_this_month":358,"eur_contracts_this_month":223,"eur_volume_this_month":0.50245016,"usd_contracts_this_month":79,"usd_volume_this_month":0.16885738,"cad_contracts_this_month":25,"cad_volume_this_month":0.04439234,"gbp_contracts_this_month":5,"gbp_volume_this_month":0.00279958,"btc_contracts_this_month":1,"btc_volume_this_month":0.001,"oth_contracts_this_month":25,"oth_volume_this_month":0.01819142},{"this_summarys_date":"2022-05","volume_this_month":2.37946855,"contracts_this_month":593,"eur_contracts_this_month":415,"eur_volume_this_month":1.77246072,"usd_contracts_this_month":105,"usd_volume_this_month":0.32284281,"cad_contracts_this_month":17,"cad_volume_this_month":0.12111738,"gbp_contracts_this_month":4,"gbp_volume_this_month":0.00332451,"btc_contracts_this_month":3,"btc_volume_this_month":0.02513584,"oth_contracts_this_month":49,"oth_volume_this_month":0.13458729},{"this_summarys_date":"2022-06","volume_this_month":6.09582541,"contracts_this_month":873,"eur_contracts_this_month":615,"eur_volume_this_month":4.22499494,"usd_contracts_this_month":171,"usd_volume_this_month":1.3044998,"cad_contracts_this_month":8,"cad_volume_this_month":0.07357793,"gbp_contracts_this_month":10,"gbp_volume_this_month":0.10284416,"btc_contracts_this_month":21,"btc_volume_this_month":0.12506211,"oth_contracts_this_month":48,"oth_volume_this_month":0.26484647},{"this_summarys_date":"2022-07","volume_this_month":8.32621127,"contracts_this_month":857,"eur_contracts_this_month":542,"eur_volume_this_month":5.24576372,"usd_contracts_this_month":229,"usd_volume_this_month":2.35882965,"cad_contracts_this_month":15,"cad_volume_this_month":0.20333049,"gbp_contracts_this_month":30,"gbp_volume_this_month":0.27098794,"btc_contracts_this_month":4,"btc_volume_this_month":0.0162539,"oth_contracts_this_month":37,"oth_volume_this_month":0.23104557},{"this_summarys_date":"2022-08","volume_this_month":9.17260171,"contracts_this_month":1005,"eur_contracts_this_month":545,"eur_volume_this_month":4.71221041,"usd_contracts_this_month":295,"usd_volume_this_month":2.55588631,"cad_contracts_this_month":13,"cad_volume_this_month":0.13332879,"gbp_contracts_this_month":104,"gbp_volume_this_month":1.42949101,"btc_contracts_this_month":4,"btc_volume_this_month":0.04816932,"oth_contracts_this_month":44,"oth_volume_this_month":0.29351587},{"this_summarys_date":"2022-09","volume_this_month":11.23415573,"contracts_this_month":1136,"eur_contracts_this_month":598,"eur_volume_this_month":6.0163131,"usd_contracts_this_month":416,"usd_volume_this_month":4.18453905,"cad_contracts_this_month":18,"cad_volume_this_month":0.14291236,"gbp_contracts_this_month":32,"gbp_volume_this_month":0.43607172,"btc_contracts_this_month":15,"btc_volume_this_month":0.16738798,"oth_contracts_this_month":57,"oth_volume_this_month":0.28693152},{"this_summarys_date":"2022-10","volume_this_month":14.42402944,"contracts_this_month":1150,"eur_contracts_this_month":686,"eur_volume_this_month":8.27423572,"usd_contracts_this_month":313,"usd_volume_this_month":4.27761574,"cad_contracts_this_month":30,"cad_volume_this_month":0.51053257,"gbp_contracts_this_month":49,"gbp_volume_this_month":0.62827364,"btc_contracts_this_month":8,"btc_volume_this_month":0.0583553,"oth_contracts_this_month":64,"oth_volume_this_month":0.67501647},{"this_summarys_date":"2022-11","volume_this_month":21.21363114,"contracts_this_month":1513,"eur_contracts_this_month":803,"eur_volume_this_month":11.3785135,"usd_contracts_this_month":547,"usd_volume_this_month":7.70252527,"cad_contracts_this_month":51,"cad_volume_this_month":0.93541341,"gbp_contracts_this_month":28,"gbp_volume_this_month":0.62843585,"btc_contracts_this_month":28,"btc_volume_this_month":0.24546303,"oth_contracts_this_month":56,"oth_volume_this_month":0.32328008},{"this_summarys_date":"2022-12","volume_this_month":21.05987519,"contracts_this_month":1445,"eur_contracts_this_month":724,"eur_volume_this_month":9.21757042,"usd_contracts_this_month":510,"usd_volume_this_month":9.00793869,"cad_contracts_this_month":64,"cad_volume_this_month":1.18941462,"gbp_contracts_this_month":33,"gbp_volume_this_month":0.70170621,"btc_contracts_this_month":57,"btc_volume_this_month":0.6816819,"oth_contracts_this_month":57,"oth_volume_this_month":0.26156335},{"this_summarys_date":"2023-01","volume_this_month":19.93752309,"contracts_this_month":1680,"eur_contracts_this_month":966,"eur_volume_this_month":10.63143833,"usd_contracts_this_month":530,"usd_volume_this_month":7.45150605,"cad_contracts_this_month":69,"cad_volume_this_month":0.97286059,"gbp_contracts_this_month":11,"gbp_volume_this_month":0.17743037,"btc_contracts_this_month":36,"btc_volume_this_month":0.48149693,"oth_contracts_this_month":68,"oth_volume_this_month":0.22279082},{"this_summarys_date":"2023-02","volume_this_month":18.17588662,"contracts_this_month":1662,"eur_contracts_this_month":900,"eur_volume_this_month":8.40067693,"usd_contracts_this_month":583,"usd_volume_this_month":7.40451528,"cad_contracts_this_month":71,"cad_volume_this_month":0.94563251,"gbp_contracts_this_month":10,"gbp_volume_this_month":0.07711459,"btc_contracts_this_month":49,"btc_volume_this_month":1.18324506,"oth_contracts_this_month":49,"oth_volume_this_month":0.16470225},{"this_summarys_date":"2023-03","volume_this_month":29.11038668,"contracts_this_month":2553,"eur_contracts_this_month":1268,"eur_volume_this_month":10.92249161,"usd_contracts_this_month":1003,"usd_volume_this_month":14.21961631,"cad_contracts_this_month":81,"cad_volume_this_month":0.99062821,"gbp_contracts_this_month":4,"gbp_volume_this_month":0.0611995,"btc_contracts_this_month":111,"btc_volume_this_month":2.6619556,"oth_contracts_this_month":86,"oth_volume_this_month":0.25449545},{"this_summarys_date":"2023-04","volume_this_month":24.21694961,"contracts_this_month":2174,"eur_contracts_this_month":1034,"eur_volume_this_month":9.33207463,"usd_contracts_this_month":950,"usd_volume_this_month":13.59993844,"cad_contracts_this_month":47,"cad_volume_this_month":0.4113013,"gbp_contracts_this_month":7,"gbp_volume_this_month":0.07735659,"btc_contracts_this_month":34,"btc_volume_this_month":0.47300508,"oth_contracts_this_month":102,"oth_volume_this_month":0.32327357},{"this_summarys_date":"2023-05","volume_this_month":24.45421647,"contracts_this_month":2175,"eur_contracts_this_month":1156,"eur_volume_this_month":12.35377199,"usd_contracts_this_month":803,"usd_volume_this_month":10.41360041,"cad_contracts_this_month":20,"cad_volume_this_month":0.42856718,"gbp_contracts_this_month":4,"gbp_volume_this_month":0.04589464,"btc_contracts_this_month":42,"btc_volume_this_month":0.71729318,"oth_contracts_this_month":150,"oth_volume_this_month":0.49508907},{"this_summarys_date":"2023-06","volume_this_month":26.92712795,"contracts_this_month":2256,"eur_contracts_this_month":1179,"eur_volume_this_month":13.97301848,"usd_contracts_this_month":871,"usd_volume_this_month":11.41142234,"cad_contracts_this_month":30,"cad_volume_this_month":0.32943285,"gbp_contracts_this_month":6,"gbp_volume_this_month":0.09031521,"btc_contracts_this_month":30,"btc_volume_this_month":0.5596191,"oth_contracts_this_month":140,"oth_volume_this_month":0.56331997},{"this_summarys_date":"2023-07","volume_this_month":27.30711596,"contracts_this_month":2291,"eur_contracts_this_month":1077,"eur_volume_this_month":12.66362042,"usd_contracts_this_month":863,"usd_volume_this_month":10.94843642,"cad_contracts_this_month":34,"cad_volume_this_month":0.32628625,"gbp_contracts_this_month":27,"gbp_volume_this_month":0.53091026,"btc_contracts_this_month":71,"btc_volume_this_month":1.9601356,"oth_contracts_this_month":219,"oth_volume_this_month":0.87772701},{"this_summarys_date":"2023-08","volume_this_month":28.14366408,"contracts_this_month":2166,"eur_contracts_this_month":1035,"eur_volume_this_month":13.29852992,"usd_contracts_this_month":879,"usd_volume_this_month":13.04427633,"cad_contracts_this_month":21,"cad_volume_this_month":0.23349204,"gbp_contracts_this_month":11,"gbp_volume_this_month":0.19061355,"btc_contracts_this_month":24,"btc_volume_this_month":0.46844916,"oth_contracts_this_month":196,"oth_volume_this_month":0.90830308},{"this_summarys_date":"2023-09","volume_this_month":17.20554774,"contracts_this_month":1521,"eur_contracts_this_month":668,"eur_volume_this_month":7.21542868,"usd_contracts_this_month":605,"usd_volume_this_month":8.25608797,"cad_contracts_this_month":24,"cad_volume_this_month":0.12591309,"gbp_contracts_this_month":5,"gbp_volume_this_month":0.06302248,"btc_contracts_this_month":24,"btc_volume_this_month":0.57828421,"oth_contracts_this_month":195,"oth_volume_this_month":0.96681131},{"this_summarys_date":"2023-10","volume_this_month":25.92738185,"contracts_this_month":2146,"eur_contracts_this_month":941,"eur_volume_this_month":10.6423907,"usd_contracts_this_month":755,"usd_volume_this_month":11.55238317,"cad_contracts_this_month":16,"cad_volume_this_month":0.15537276,"gbp_contracts_this_month":13,"gbp_volume_this_month":0.18525978,"btc_contracts_this_month":40,"btc_volume_this_month":0.56123313,"oth_contracts_this_month":381,"oth_volume_this_month":2.83074231},{"this_summarys_date":"2023-11","volume_this_month":22.66406387,"contracts_this_month":2177,"eur_contracts_this_month":1012,"eur_volume_this_month":9.51241096,"usd_contracts_this_month":815,"usd_volume_this_month":11.23096272,"cad_contracts_this_month":40,"cad_volume_this_month":0.38482548,"gbp_contracts_this_month":14,"gbp_volume_this_month":0.18330556,"btc_contracts_this_month":19,"btc_volume_this_month":0.31375122,"oth_contracts_this_month":277,"oth_volume_this_month":1.03880793},{"this_summarys_date":"2023-12","volume_this_month":22.8579413,"contracts_this_month":2441,"eur_contracts_this_month":1088,"eur_volume_this_month":9.80990307,"usd_contracts_this_month":882,"usd_volume_this_month":10.50255678,"cad_contracts_this_month":44,"cad_volume_this_month":0.52882252,"gbp_contracts_this_month":17,"gbp_volume_this_month":0.06968008,"btc_contracts_this_month":22,"btc_volume_this_month":0.47114465,"oth_contracts_this_month":388,"oth_volume_this_month":1.4758342},{"this_summarys_date":"2024-01","volume_this_month":24.49044463,"contracts_this_month":2611,"eur_contracts_this_month":1245,"eur_volume_this_month":13.66989886,"usd_contracts_this_month":747,"usd_volume_this_month":7.69204626,"cad_contracts_this_month":26,"cad_volume_this_month":0.2688978,"gbp_contracts_this_month":26,"gbp_volume_this_month":0.17631517,"btc_contracts_this_month":31,"btc_volume_this_month":0.6276609,"oth_contracts_this_month":536,"oth_volume_this_month":2.05562564},{"this_summarys_date":"2024-02","volume_this_month":20.20863123,"contracts_this_month":2469,"eur_contracts_this_month":1136,"eur_volume_this_month":10.12316113,"usd_contracts_this_month":720,"usd_volume_this_month":7.35838812,"cad_contracts_this_month":18,"cad_volume_this_month":0.16944773,"gbp_contracts_this_month":33,"gbp_volume_this_month":0.22657224,"btc_contracts_this_month":18,"btc_volume_this_month":0.31378664,"oth_contracts_this_month":544,"oth_volume_this_month":2.01727537},{"this_summarys_date":"2024-03","volume_this_month":18.12584484,"contracts_this_month":2919,"eur_contracts_this_month":1289,"eur_volume_this_month":8.76729185,"usd_contracts_this_month":828,"usd_volume_this_month":6.21364666,"cad_contracts_this_month":26,"cad_volume_this_month":0.16965212,"gbp_contracts_this_month":37,"gbp_volume_this_month":0.17512312,"btc_contracts_this_month":38,"btc_volume_this_month":0.64910544,"oth_contracts_this_month":701,"oth_volume_this_month":2.15102565},{"this_summarys_date":"2024-04","volume_this_month":8.7746834,"contracts_this_month":1448,"eur_contracts_this_month":570,"eur_volume_this_month":4.60255945,"usd_contracts_this_month":211,"usd_volume_this_month":1.5977454,"cad_contracts_this_month":26,"cad_volume_this_month":0.14796061,"gbp_contracts_this_month":18,"gbp_volume_this_month":0.09957255,"btc_contracts_this_month":13,"btc_volume_this_month":0.25429412,"oth_contracts_this_month":610,"oth_volume_this_month":2.07255127},{"this_summarys_date":"2024-05","volume_this_month":10.60208312,"contracts_this_month":1563,"eur_contracts_this_month":679,"eur_volume_this_month":4.98175323,"usd_contracts_this_month":292,"usd_volume_this_month":2.81559355,"cad_contracts_this_month":44,"cad_volume_this_month":0.23598128,"gbp_contracts_this_month":10,"gbp_volume_this_month":0.06359387,"btc_contracts_this_month":12,"btc_volume_this_month":0.21813482,"oth_contracts_this_month":526,"oth_volume_this_month":2.28702637},{"this_summarys_date":"2024-06","volume_this_month":17.13626336,"contracts_this_month":2253,"eur_contracts_this_month":986,"eur_volume_this_month":7.19080556,"usd_contracts_this_month":584,"usd_volume_this_month":6.12163125,"cad_contracts_this_month":49,"cad_volume_this_month":0.23266269,"gbp_contracts_this_month":22,"gbp_volume_this_month":0.26287234,"btc_contracts_this_month":26,"btc_volume_this_month":0.54927829,"oth_contracts_this_month":586,"oth_volume_this_month":2.77901323}];
 
-            var makeBtcChart = ( in_dollars, xValues ) => {
+            var makeBtcChart = async ( in_dollars, xValues ) => {
                 //I want 12 yValues from the first point's value to the last point's value
-                var nums_between = points[ points.length - 1 ][ "cum" ] - points[ 0 ][ "cum" ];
+                var cum_volume = 0;
+                summaries.forEach( item => cum_volume = cum_volume + item.volume_this_month );
+                var nums_between = cum_volume - summaries[ 0 ][ "volume_this_month" ];
                 var divisor = Math.floor( nums_between / num_of_values );
                 var yValues = [];
                 var i; for ( i=0; i<num_of_values - 1; i++ ) {
-                    var val_to_push = points[ 0 ][ "cum" ] + ( divisor * i );
-                    if ( !in_dollars ) {
-                        var rand = Number( ( Math.random() * 5 ).toFixed( 3 ) );
-                        if ( i % 2 ) val_to_push = val_to_push + rand;
-                        else val_to_push = val_to_push - rand;
-                        val_to_push = Number( val_to_push.toFixed( 3 ) );
-                    }
+                    var xVal = xValues[ i ];
+                    var closest_summary = findClosestSummary( xVal );
+                    var cum_til_here = 0;
+                    summaries.forEach( ( item, index ) => {
+                        if ( index > closest_summary ) return;
+                        cum_til_here = cum_til_here + item.volume_this_month;
+                        cum_til_here = Number( cum_til_here.toFixed( 3 ) );
+                    });
+                    var val_to_push = cum_til_here;
                     yValues.push( val_to_push );
                 }
-                yValues.push( points[ points.length - 1 ][ "cum" ] );
+                yValues.push( cum_volume );
                 yValues[ 0 ] = 0;
-                var min = points[ 0 ][ "cum" ];
-                var max = Math.ceil( ( points[ points.length - 1 ][ "cum" ] / 50 ) ) * 50;
+                var min = summaries[ 0 ][ "volume_this_month" ];
+                var max = Math.ceil( cum_volume / 50 ) * 50;
                 if ( in_dollars ) {
-                    yValues = yValues.map( item => ( item * btc_price ) );
+                    yValues = yValues.map( item => Number( ( item * btc_price ).toFixed( 2 ) ) );
                     min = min * btc_price;
-                    max = Math.ceil( ( ( points[ points.length - 1 ][ "cum" ] * btc_price ) / 1000000 ) ) * 1000000;
+                    max = Math.ceil( ( ( cum_volume * btc_price ) / 1000000 ) ) * 1000000;
                 }
-
-                new Chart("cum_btc", {
+                if ( charts.length ) charts[ 0 ].destroy();
+                var chart = new Chart("cum_btc", {
                     type: "line",
                     data: {
                         labels: xValues,
@@ -253,6 +254,8 @@
                       }
                   },
                 });
+                charts = [];
+                charts.push( chart );
             }
         </script>
         <script>
@@ -263,49 +266,107 @@
                 var authors = [ "99958a1b64b979a3cb69f6fd2fe77b801156122a14a5691f34632a206795e0ee" ];
                 var eLoop = async () => {
                     try {
-                        var events = await getEvents( relay, ids, authors, [ 1 ] );
+                        var events = await getEvents( relay, ids, authors, [ 57471 ] );
+                        console.log( events );
                         // var events = [{"content":"{\"sum\":0.52456104,\"cum\":66.18859599,\"buy\":39,\"sel\":70}","created_at":1722360566,"id":"ced3962f34ad38f408bc27183c582432678f2800e05156ccf440b4559c60e0a9","kind":1,"pubkey":"99958a1b64b979a3cb69f6fd2fe77b801156122a14a5691f34632a206795e0ee","sig":"423aad7ae6e0c747adf792055b2cfad2f64798aa161bab2d7f9f2873041edfc8bfdf2c90b02c80d5f8385d4b09fd012f4a43a353d8f0dd69c9625b12cb1172d8","tags":[]}];
                         if ( !events.length || !events ) {
                             console.log( 'retrying...' );
                             return eLoop();
                         }
-                        return events.reverse();
+                        return events;
                     } catch( e ) {
                         console.log( 'retrying...' );
                         return eLoop();
                     }
                 }
                 var events = await eLoop();
+                var today = events[ 0 ];
+                var yesterday = {content: JSON.stringify({cum_volume: Number( ( 499.1158921 - 0.58009421 ).toFixed( 3 ) ), time: 1722360566, cum_contracts: 50160 - 125}), created_at: 1722360566}
+                if ( events.length > 1 ) yesterday = events[ 1 ];
+
+                var todays_date = new Date().toLocaleDateString( 'en-CA' ).substring( 0, 7 );
+
+                var todays_event = JSON.parse( today[ "content" ] );
+                var yesterdays_event = JSON.parse( yesterday[ "content" ] );
+                var volume_til_this_month = 0;
+                summaries.forEach( item => volume_til_this_month = volume_til_this_month + item[ "volume_this_month" ] );
+                volume_til_this_month = Number( volume_til_this_month.toFixed( 8 ) );
+                var contracts_til_this_month = 0;
+                summaries.forEach( item => contracts_til_this_month = contracts_til_this_month + item[ "contracts_this_month" ] );
+
+                var eur_contracts_til_this_month = 0;
+                summaries.forEach( item => eur_contracts_til_this_month = eur_contracts_til_this_month + item[ "eur_contracts_til_this_month" ] );
+                var eur_volume_til_this_month = 0;
+                summaries.forEach( item => eur_volume_til_this_month = eur_volume_til_this_month + item[ "eur_volume_this_month" ] );
+                eur_volume_til_this_month = Number( eur_volume_til_this_month.toFixed( 8 ) );
+
+                var usd_contracts_til_this_month = 0;
+                summaries.forEach( item => usd_contracts_til_this_month = usd_contracts_til_this_month + item[ "usd_contracts_til_this_month" ] );
+                var usd_volume_til_this_month = 0;
+                summaries.forEach( item => usd_volume_til_this_month = usd_volume_til_this_month + item[ "usd_volume_this_month" ] );
+                usd_volume_til_this_month = Number( usd_volume_til_this_month.toFixed( 8 ) );
+
+                var cad_contracts_til_this_month = 0;
+                summaries.forEach( item => cad_contracts_til_this_month = cad_contracts_til_this_month + item[ "cad_contracts_til_this_month" ] );
+                var cad_volume_til_this_month = 0;
+                summaries.forEach( item => cad_volume_til_this_month = cad_volume_til_this_month + item[ "cad_volume_this_month" ] );
+                cad_volume_til_this_month = Number( cad_volume_til_this_month.toFixed( 8 ) );
+
+                var gbp_contracts_til_this_month = 0;
+                summaries.forEach( item => gbp_contracts_til_this_month = gbp_contracts_til_this_month + item[ "gbp_contracts_til_this_month" ] );
+                var gbp_volume_til_this_month = 0;
+                summaries.forEach( item => gbp_volume_til_this_month = gbp_volume_til_this_month + item[ "gbp_volume_this_month" ] );
+                gbp_volume_til_this_month = Number( gbp_volume_til_this_month.toFixed( 8 ) );
+
+                var btc_contracts_til_this_month = 0;
+                summaries.forEach( item => btc_contracts_til_this_month = btc_contracts_til_this_month + item[ "btc_contracts_til_this_month" ] );
+                var btc_volume_til_this_month = 0;
+                summaries.forEach( item => btc_volume_til_this_month = btc_volume_til_this_month + item[ "btc_volume_this_month" ] );
+                btc_volume_til_this_month = Number( btc_volume_til_this_month.toFixed( 8 ) );
+
+                var oth_contracts_til_this_month = 0;
+                summaries.forEach( item => oth_contracts_til_this_month = oth_contracts_til_this_month + item[ "oth_contracts_til_this_month" ] );
+                var oth_volume_til_this_month = 0;
+                summaries.forEach( item => oth_volume_til_this_month = oth_volume_til_this_month + item[ "oth_volume_this_month" ] );
+                oth_volume_til_this_month = Number( oth_volume_til_this_month.toFixed( 8 ) );
+
+                //return here
+
+                var this_months_summary = {
+                    "this_summarys_date":todays_date,
+                    "volume_this_month": Number( ( todays_event[ "cum_volume" ] - volume_til_this_month ).toFixed( 8 ) ),
+                    "contracts_this_month": todays_event[ "cum_contracts" ] - contracts_til_this_month,
+                    "eur_contracts_this_month": todays_event[ "cum_eur_contracts" ] - eur_contracts_til_this_month,
+                    "eur_volume_this_month": Number( ( todays_event[ "cum_eur_volume" ] - eur_volume_til_this_month ).toFixed( 8 ) ),
+                    "usd_contracts_this_month": todays_event[ "cum_usd_contracts" ] - usd_contracts_til_this_month,
+                    "usd_volume_this_month": Number( ( todays_event[ "cum_usd_volume" ] - usd_volume_til_this_month ).toFixed( 8 ) ),
+                    "cad_contracts_this_month": todays_event[ "cum_cad_contracts" ] - cad_contracts_til_this_month,
+                    "cad_volume_this_month": Number( ( todays_event[ "cum_cad_volume" ] - cad_volume_til_this_month ).toFixed( 8 ) ),
+                    "gbp_contracts_this_month": todays_event[ "cum_gbp_contracts" ] - gbp_contracts_til_this_month,
+                    "gbp_volume_this_month": Number( ( todays_event[ "cum_gbp_volume" ] - gbp_volume_til_this_month ).toFixed( 8 ) ),
+                    "btc_contracts_this_month": todays_event[ "cum_btc_contracts" ] - btc_contracts_til_this_month,
+                    "btc_volume_this_month": Number( ( todays_event[ "cum_btc_volume" ] - btc_volume_til_this_month ).toFixed( 8 ) ),
+                    "oth_contracts_this_month": todays_event[ "cum_oth_contracts" ] - oth_contracts_til_this_month,
+                    "oth_volume_this_month": Number( ( todays_event[ "cum_oth_volume" ] - oth_volume_til_this_month ).toFixed( 8 ) ),
+                }
+
+                summaries.push( this_months_summary );
+                summaries.forEach( item => item.time = Math.floor( new Date( item.this_summarys_date ).getTime() / 1000 ) );
 
                 $( '#cum_btc' ).classList.remove( "hidden" );
                 $( '#cum_contracts' ).classList.remove( "hidden" );
                 $$( '.loading' ).forEach( item => item.classList.add( "hidden" ) );
-                var todays_event = JSON.parse( events[ events.length - 1 ][ "content" ] );
-                var num_traded_today = todays_event[ "sum" ];
-                var num_in_dollars = ( num_traded_today * btc_price ).toFixed( 2 );
+                var num_traded_today = ( todays_event[ "cum_volume" ] - yesterdays_event[ "cum_volume" ] ).toFixed( 8 );
+                var num_in_dollars = ( Number( num_traded_today ) * btc_price ).toFixed( 2 );
                 $( '.num_traded_today' ).innerText = `${num_traded_today} btc ($${num_in_dollars})`;
-                var num_contracts_today = todays_event[ "buy" ] + todays_event[ "sel" ];
+                var num_contracts_today = todays_event[ "cum_contracts" ] - yesterdays_event[ "cum_contracts" ];
                 $( '.num_contracts_today' ).innerText = num_contracts_today;
-                var i; for ( i=0; i<events.length; i++ ) {
-                    var event = events[ 0 ];
-                    var info = JSON.parse( event.content );
-                    var time = event.created_at;
-                    var cum = info[ "cum" ];
-                    var buy = info[ "buy" ];
-                    var sel = info[ "sel" ];
-                    points.push({
-                        time: time,
-                        cum: Number( ( points[ points.length - 1 ][ "cum" ] + cum ).toFixed( 3 ) ),
-                        buy: points[ points.length - 1 ][ "buy" ] + buy,
-                        sel: points[ points.length - 1 ][ "sel" ] + sel,
-                    });
-                }
 
                 //I want 12 xValues between the first point's time and the last point's time
-                var time_between = points[ points.length - 1 ][ "time" ] - points[ 0 ][ "time" ];
+                var time_between = summaries[ summaries.length - 1 ][ "time" ] - summaries[ 0 ][ "time" ];
                 var divisor = Number( ( time_between / num_of_values ).toFixed( 3 ) );
                 var i; for ( i=0; i<num_of_values - 1; i++ ) {
-                    var val_to_push = Math.floor( points[ 0 ][ "time" ] + ( divisor * i ) );
+                    var val_to_push = Math.floor( summaries[ 0 ][ "time" ] + ( divisor * i ) );
                     xValues.push( val_to_push );
                 };
                 xValues.push( events[ events.length - 1 ][ "created_at" ] );
@@ -316,20 +377,25 @@
                 $( '.show_btc' ).onclick = () => {makeBtcChart( false, xValues );}
 
                 //I want 12 yValues from the first point's value to the last point's value
-                var num_contracts_1 = points[ points.length - 1 ][ "buy" ] + points[ points.length - 1 ][ "sel" ];
-                var num_contracts_2 = points[ 0 ][ "buy" ] + points[ 0 ][ "sel" ];
-                var nums_between = num_contracts_1 - num_contracts_2;
+                var cum_num_contracts = 0;
+                summaries.forEach( item => cum_num_contracts = cum_num_contracts + item.contracts_this_month );
+                var num_contracts_1 = summaries[ 0 ].contracts_this_month;
+                var num_contracts_2 = cum_num_contracts;
+                var nums_between = num_contracts_2 - num_contracts_1;
                 var divisor = Math.floor( nums_between / num_of_values );
                 var yValues = [];
                 var i; for ( i=0; i<num_of_values - 1; i++ ) {
-                    var val_to_push = num_contracts_2 + ( divisor * i );
-                    var rand = Math.floor( Math.random() * 500 );
-                    if ( i % 2 ) val_to_push = val_to_push + rand;
-                    else val_to_push = val_to_push - rand;
+                    var xVal = xValues[ i ];
+                    var closest_summary = findClosestSummary( xVal );
+                    var cts_til_here = 0;
+                    summaries.forEach( ( item, index ) => {
+                        if ( index > closest_summary ) return;
+                        cts_til_here = cts_til_here + item.contracts_this_month;
+                    });
+                    var val_to_push = cts_til_here;
                     yValues.push( val_to_push );
                 }
-                yValues[ 0 ] = 0;
-                yValues.push( num_contracts_1 );
+                yValues.push( num_contracts_2 );
 
                 new Chart("cum_contracts", {
                     type: "line",
@@ -346,7 +412,7 @@
                   options: {
                       legend: {display: false},
                       scales: {
-                          yAxes: [{ticks: {min: num_contracts_2, max: Math.ceil( ( num_contracts_1 / 50 ) ) * 50}}],
+                          yAxes: [{ticks: {min: num_contracts_1, max: Math.ceil( ( num_contracts_2 / 50 ) ) * 50}}],
                       }
                   },
                 });
