@@ -1,3 +1,7 @@
+//requires running index.py on the same server (index.py is located in this same github repo)
+//also requires these two dependencies:
+//npm i ws noble-secp256k1
+
 var WebSocket = require( 'ws' ).WebSocket;
 var nobleSecp256k1 = require( 'noble-secp256k1' );
 var sha256 = nobleSecp256k1.utils.sha256;
@@ -20,7 +24,6 @@ var sendInfo = async info => {
 var sendEvent = ( event, relay ) => {
     var socket = new WebSocket( relay );
     socket.on( 'open', () => {
-        console.log( 0 );
         var sendable = JSON.stringify( [ "EVENT", event ] );
         socket.send( sendable );
         setTimeout( () => {socket.close();}, 1000 );
