@@ -1,3 +1,6 @@
+# requires two dependencies:
+# sudo apt install python3-flask python3-socks
+# or pip3 install flask socks
 import requests
 from flask import Flask, request, url_for, make_response, send_file
 app = Flask(__name__)
