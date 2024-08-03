@@ -684,7 +684,7 @@ var init = async () => {
         cum_oth_contracts,
     }
 
-    // sendInfo( JSON.stringify( daily_report ) );
+    sendInfo( JSON.stringify( daily_report ) );
     await waitSomeSeconds( 86400 );
     return init();
 }
