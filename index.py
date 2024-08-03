@@ -1,6 +1,7 @@
 # requires two dependencies:
 # sudo apt install python3-flask python3-socks
 # or pip3 install flask socks
+
 import requests
 from flask import Flask, request, url_for, make_response, send_file
 app = Flask(__name__)
@@ -20,6 +21,9 @@ def main_fn():
     from flask import request
     pw = request.args.get( "pw" )
     if str( pw ) != password:
+        print( str( pw ) )
+        print( password )
+        print( password == str( pw ) )
         return '{"status":"error","message":"wrong password"}'
     endpoint = request.args.get( "endpoint" )
     path_start = endpoint.find( "/", 9 )
