@@ -339,7 +339,7 @@
 
                 var getOperatorInfo = async ( name, addy ) => {
                     var url = `http://${addy}.onion/api/info/`;
-                    if ( url.includes( ".onion/" ) ) url = `http://127.0.0.1:5000/?endpoint=${url}`;
+                    if ( url.includes( ".onion/" ) ) url = `https://robostatsserver.supertestnet.org/?endpoint=${url}`;
                     var info_1 = await fetch( url );
                     var info_2 = await info_1.json();
                     info_2[ "operator_name" ] = name;
