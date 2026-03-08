@@ -251,7 +251,7 @@
                     $$( '.loading' ).forEach( item => item.classList.add( "hidden" ) );
                     var todays_event = JSON.parse( events[ events.length - 1 ][ "content" ] );
                     var num_traded_today = todays_event[ "sum" ];
-                    var num_in_dollars = ( num_traded_today * btc_price ).toFixed( 2 ).toLocaleString();
+                    var num_in_dollars = Number( ( num_traded_today * btc_price ).toFixed( 2 ) ).toLocaleString();
                     $( '.num_traded_today' ).innerText = `${num_traded_today} btc ($${num_in_dollars})`;
                     var num_contracts_today = todays_event[ "buy" ] + todays_event[ "sel" ];
                     $( '.num_contracts_today' ).innerText = num_contracts_today;
