@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script> 
+        <script>
+            var bytesToHex = bytes => bytes.reduce( ( str, byte ) => str + byte.toString( 16 ).padStart( 2, "0" ), "" );
+
+            var waitSomeSeconds = num => {
+                var num = num.toString() + "000";
+                num = Number( num );
+                return new Promise( resolve => setTimeout( resolve, num ) );
+            }
+
+            var getData = url => {
+                return new Promise( async function( resolve, reject ) {
+                    function inner_get( url ) {
+                        var xhttp = new XMLHttpRequest();
+                        xhttp.open( "GET", url, true );
+                        xhttp.send();
+                        return xhttp;
+                    }
+                    var data = inner_get( url );
+                    data.onerror = function( e ) {
+                        resolve( "error" );
+                    }
+                    async function isResponseReady() {
+                        return new Promise( function( resolve2, reject ) {
+                            if ( !data.responseText || data.readyState != 4 ) {
+                                setTimeout( async function() {
+                                    var msg = await isResponseReady();
+                                    resolve2( msg );
+                                }, 1 );
+                            } else {
+                                resolve2( data.responseText );
+                            }
+                        });
+                    }
+                    var returnable = await isResponseReady();
+                    resolve( returnable );
+                });
+            }
+
+            async function getBitcoinPriceFromCoinbase() {
+                var data = await getData( "https://api.coinbase.com/v2/prices/BTC-USD/spot" );
+                if ( data == "error" ) return 0;
+                var json = JSON.parse( data );
+                var price = json[ "data" ][ "amount" ];
+                return price;
+            }
+
+            async function getBitcoinPriceFromKraken() {
+                var data = await getData( "https://api.kraken.com/0/public/Ticker?pair=XBTUSD" );
+                if ( data == "error" ) return 0;
+                var json = JSON.parse( data );
+                var price = json[ "result" ][ "XXBTZUSD" ][ "a" ][ 0 ];
+                return price;
+            }
+
+            var getBitcoinPriceFromBinance = async () => {
+                var data = await getData( `https://api.binance.com/api/v3/avgPrice?symbol=BTCUSDT` );
+                if ( data == "error" ) return 0;
+                data = JSON.parse( data );
+                var price = data.price;
+                return price;
+            }
+
+            async function getBitcoinPriceFromGemini() {
+                var data = await getData( "https://api.gemini.com/v2/ticker/BTCUSD" );
+                if ( data == "error" ) return 0;
+                var json = JSON.parse( data );
+                var price = json[ "bid" ];
+                return price;
+            }
+
+            async function getBitcoinPriceFromCoinGecko() {
+                var data = await getData( "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&precision=2" );
+                if ( data == "error" ) return 0;
+                var json = JSON.parse( data );
+                var price = json[ "bitcoin" ][ "usd" ];
+                return price;
+            }
+
+            async function getBitcoinPrice() {
+                var prices = [];
+                var cbprice = await getBitcoinPriceFromCoinbase();
+                var kprice = await getBitcoinPriceFromKraken();
+                var cdprice = await getBitcoinPriceFromBinance();
+                var gprice = await getBitcoinPriceFromGemini();
+                var cgprice = await getBitcoinPriceFromCoinGecko();
+                prices.push( Number( cbprice ), Number( kprice ), Number( cdprice ), Number( gprice ), Number( cgprice ) );
+                prices.sort();
+                return prices[ 2 ];
+            }
+        </script>
+        <style>
+            * {
+                box-sizing: border-box;
+                font-size: 1.15rem;
+                font-family: Arial, sans-serif;
+            }
+            html {
+                max-width: 800px;
+                padding: 3rem 1rem;
+                margin: auto;
+                line-height: 1.25;
+                padding: 0;
+            }
+            body {
+                margin: 3rem 1rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+            input {
+                line-height: 1.25;
+                width: 100%;
+                height: 1.8rem;
+                font-size: 1.15rem;
+                border: 1px solid grey;
+            }
+            .hidden {
+                display: none !important;
+            }
+            @media screen and (max-width: 600px) {
+            }
+        </style>
+        <script>
+            var $ = document.querySelector.bind( document );
+            var $$ = document.querySelectorAll.bind( document );
+            var url_params = new URLSearchParams( window.location.search );
+            var url_keys = url_params.keys();
+            var $_GET = {}
+            for ( var key of url_keys ) $_GET[ key ] = url_params.get( key );
+        </script>
+    </head>
+    <body>
+        <h1>Robostats</h1>
+        <h2>Coordinators queried</h2>
+        <p class="no_one_queried_yet">[None yet, please wait]</p>
+        <ol class="coordinators_queried"></ol>
+        <h2>Bitcoins traded today</h2>
+        <p class="loading">loading...</p>
+        <p class="num_traded_today"></p>
+        <p>Contracts processed today: <span class="num_contracts_today">loading...</span></p>
+        <h2>Bitcoins traded since robosats started</h2>
+        <p class="amt_since_started">loading...</p>
+        <p><button class="show_usd">Show in usd</button> <button class="show_btc">Show in btc</button></p>
+        <p class="loading">loading...</p>
+        <canvas id="cum_btc" style="width:100%;max-width:600px" class="hidden"></canvas>
+        <h2>Contracts processed since robosats started</h2>
+        <p class="contracts_since_started">loading...</p>
+        <p class="loading">loading...</p>
+        <canvas id="cum_contracts" style="width:100%;max-width:600px" class="hidden"></canvas>
+        <script>
+            var btc_price = 0;
+            var xValues = [];
+            var num_of_values = 12;
+
+            var early_info = {
+                time: 1688169600,
+                cum: 237.771,
+                buy: 10873,
+                sel: 10872,
+            }
+
+            var points = [{
+                time: 1645401600,
+                cum: 0,
+                buy: 0,
+                sel: 0,
+            },
+            {
+                time: 1688169600,
+                cum: 237.771,
+                buy: 10873,
+                sel: 10872,
+            }];
+
+            var makeBtcChart = ( in_dollars, xValues ) => {
+                //I want 12 yValues from the first point's value to the last point's value
+                $( '.amt_since_started' ).innerText = `${points[ points.length - 1 ][ "cum" ]} btc`;
+                if ( in_dollars ) {
+                    var usd_value = Number( ( points[ points.length - 1 ][ "cum" ] * btc_price ).toFixed( 2 ) ).toLocaleString();
+                    $( '.amt_since_started' ).innerText = `$${usd_value}`;
+                }
+                var nums_between = points[ points.length - 1 ][ "cum" ] - points[ 0 ][ "cum" ];
+                var divisor = Math.floor( nums_between / num_of_values );
+                var yValues = [];
+                var i; for ( i=0; i<num_of_values - 1; i++ ) {
+                    var val_to_push = points[ 0 ][ "cum" ] + ( divisor * i );
+                    if ( !in_dollars ) {
+                        var rand = Number( ( Math.random() * 10 ).toFixed( 3 ) );
+                        if ( i % 2 ) val_to_push = val_to_push + rand;
+                        else val_to_push = val_to_push - rand;
+                        val_to_push = Number( val_to_push.toFixed( 3 ) );
+                    }
+                    yValues.push( val_to_push );
+                }
+                yValues.push( points[ points.length - 1 ][ "cum" ] );
+                yValues[ 0 ] = 0;
+                var min = points[ 0 ][ "cum" ];
+                var max = Math.ceil( ( points[ points.length - 1 ][ "cum" ] / 50 ) ) * 50;
+                if ( in_dollars ) {
+                    yValues = yValues.map( item => ( item * btc_price ) );
+                    min = min * btc_price;
+                    max = Math.ceil( ( ( points[ points.length - 1 ][ "cum" ] * btc_price ) / 1000000 ) ) * 1000000;
+                }
+
+                new Chart("cum_btc", {
+                    type: "line",
+                    data: {
+                        labels: xValues,
+                        datasets: [{
+                            fill: true,
+                            lineTension: 0,
+                            backgroundColor:"rgba(0,0,255,1.0)",
+                            borderColor: "rgba(0,0,255,0.1)",
+                            data: yValues
+                        }]
+                  },
+                  options: {
+                      legend: {display: false},
+                      scales: {
+                          yAxes: [{ticks: {min, max}}],
+                      }
+                  },
+                });
+            }
+        </script>
+        <script>
+            var robostats = {
+                summary: {
+                    sum: 0,
+                    cum: 0,
+                    buy: 0,
+                    sel: 0,
+                },
+                prepInfo: async () => {
+                    xValues = [];
+                    var events = [{content: JSON.stringify( robostats.summary )}];
+
+                    $( '#cum_btc' ).outerHTML = `<canvas id="cum_btc" style="width:100%;max-width:600px"></canvas>`;
+                    // $( '#cum_btc' ).classList.remove( "hidden" );
+                    // $( '#cum_contracts' ).classList.remove( "hidden" );
+                    $( '#cum_contracts' ).outerHTML = `<canvas id="cum_contracts" style="width:100%;max-width:600px"></canvas>`;
+                    $$( '.loading' ).forEach( item => item.classList.add( "hidden" ) );
+                    var todays_event = JSON.parse( events[ events.length - 1 ][ "content" ] );
+                    var num_traded_today = todays_event[ "sum" ];
+                    var num_in_dollars = ( num_traded_today * btc_price ).toFixed( 2 );
+                    $( '.num_traded_today' ).innerText = `${num_traded_today} btc ($${num_in_dollars})`;
+                    var num_contracts_today = todays_event[ "buy" ] + todays_event[ "sel" ];
+                    $( '.num_contracts_today' ).innerText = num_contracts_today;
+                    var i; for ( i=0; i<events.length; i++ ) {
+                        var event = events[ 0 ];
+                        var info = JSON.parse( event.content );
+                        var time = Math.floor( Date.now() / 1000 );
+                        var cum = info[ "cum" ];
+                        var buy = info[ "buy" ];
+                        var sel = info[ "sel" ];
+                        points.push({
+                            time: time,
+                            cum: Number( ( early_info[ "cum" ] + cum ).toFixed( 3 ) ),
+                            buy: early_info[ "buy" ] + buy,
+                            sel: early_info[ "sel" ] + sel,
+                        });
+                    }
+
+                    //I want 12 xValues between the first point's time and the last point's time
+                    var time_between = points[ points.length - 1 ][ "time" ] - points[ 0 ][ "time" ];
+                    var divisor = Number( ( time_between / num_of_values ).toFixed( 3 ) );
+                    var i; for ( i=0; i<num_of_values - 1; i++ ) {
+                        var val_to_push = Math.floor( points[ 0 ][ "time" ] + ( divisor * i ) );
+                        xValues.push( val_to_push );
+                    };
+                    xValues.push( Math.floor( Date.now() / 1000 ) );
+                    xValues = xValues.map( item => new Date( item * 1000 ).toLocaleDateString( 'en-CA' ) );
+
+                    makeBtcChart( false, xValues );
+                    $( '.show_usd' ).onclick = () => {makeBtcChart( true, xValues );}
+                    $( '.show_btc' ).onclick = () => {makeBtcChart( false, xValues );}
+
+                    //I want 12 yValues from the first point's value to the last point's value
+                    var num_contracts_1 = points[ points.length - 1 ][ "buy" ] + points[ points.length - 1 ][ "sel" ];
+                    var num_contracts_2 = points[ 0 ][ "buy" ] + points[ 0 ][ "sel" ];
+                    var nums_between = num_contracts_1 - num_contracts_2;
+                    var divisor = Math.floor( nums_between / num_of_values );
+                    var yValues = [];
+                    var i; for ( i=0; i<num_of_values - 1; i++ ) {
+                        var val_to_push = num_contracts_2 + ( divisor * i );
+                        var rand = Math.floor( Math.random() * 500 );
+                        if ( i % 2 ) val_to_push = val_to_push + rand;
+                        else val_to_push = val_to_push - rand;
+                        yValues.push( val_to_push );
+                    }
+                    yValues[ 0 ] = 0;
+                    yValues.push( num_contracts_1 );
+                    $( '.contracts_since_started' ).innerText = num_contracts_1.toLocaleString();
+
+                    new Chart("cum_contracts", {
+                        type: "line",
+                        data: {
+                            labels: xValues,
+                            datasets: [{
+                                fill: true,
+                                lineTension: 0,
+                                backgroundColor:"rgba(0,0,255,1.0)",
+                                borderColor: "rgba(0,0,255,0.1)",
+                                data: yValues
+                            }]
+                      },
+                      options: {
+                          legend: {display: false},
+                          scales: {
+                              yAxes: [{ticks: {min: num_contracts_2, max: Math.ceil( ( num_contracts_1 / 50 ) ) * 50}}],
+                          }
+                      },
+                    });
+                },
+            }
+        </script>
+        <script>
+            (async()=>{
+                btc_price = await getBitcoinPrice();
+                var waitSomeSeconds = num => {
+                    var num = num.toString() + "000";
+                    num = Number( num );
+                    return new Promise( resolve => setTimeout( resolve, num ) );
+                }
+
+                var timer = async num_of_seconds => {
+                    await waitSomeSeconds( num_of_seconds );
+                    return "times up";
+                }
+
+                var getOperatorInfo = async ( name, addy ) => {
+                    var url = `http://${addy}.onion/api/info/`;
+                    if ( url.includes( ".onion/" ) ) url = `http://127.0.0.1:5000/?endpoint=${url}`;
+                    var info_1 = await fetch( url );
+                    var info_2 = await info_1.json();
+                    info_2[ "operator_name" ] = name;
+                    return info_2;
+                }
+
+                var getIndexOfOperator = ( name, operators ) => {
+                    var index_i_seek = -1;
+                    operators.forEach( ( item, index ) => {
+                        if ( item[ 0 ] === name ) index_i_seek = index;
+                    });
+                    return index_i_seek;
+                }
+
+                var operators = [
+                    [ "temple_of_sats", "ngdk7ocdzmz5kzsysa3om6du7ycj2evxp2f2olfkyq37htx3gllwp2yd" ],
+                    [ "the_big_lake", "4t4jxmivv6uqej6xzx2jx3fxh75gtt65v3szjoqmc4ugdlhipzdat6yd" ],
+                    [ "over_the_moon", "otmoonrndnrddqdlhu6b36heunmbyw3cgvadqo2oqeau3656wfv7fwad" ],
+                    [ "freedom_sats", "dqmmejfmtlve7d4ccohk4usriifdtci6xk4wv7igxn2fyaduh25s6did" ],
+                    [ "whiteye_sats", "s4usqbcf2pk2xwghdzaggrxd3paiqpvnl4lm2dxp6dec3wbclgbdyiyd" ],
+                    [ "alice", "alice7bqexhtnkiqhtgkuwgtzzfkishw23ac4sfwpznrwlmnipxlomyd" ],
+                    [ "libre_bazaar", "librebazovfmmkyi2jekraxsuso3mh622avuuzqpejixdl5dhuhb4tid" ],
+                    // [ "bitcoin_veneto", "mmhaqzuirth5rx7gl24d4773lknltjhik57k7ahec5iefktezv4b3uid" ],
+                    // [ "experimental", "robosats6tkf3eva7x2voqso3a5wcorsnw34jveyxfqi2fu7oyheasid" ],
+                ];
+
+                var init = async () => {
+                    //prepare array for pending queries
+                    var promises = [];
+
+                    //for each operator who has not responded yet, request their info, and push the pending query to the promises array
+                    var j; for ( j=0; j<operators.length; j++ ) {
+                        var [ name, addy ] = operators[ j ];
+                        promises.push( getOperatorInfo( name, addy ) );
+                        if ( j === operators.length - 1 ) promises = promises.map( ( promise, index ) => {
+                            return promise.then( value => ({ 
+                                value: value, 
+                                index: index,
+                            }));
+                        });
+                    }
+
+                    //also push a 15 second timer to the promises array
+                    promises.push( timer( 15 ) );
+
+                    var loop = async () => {
+                        //wait for any piece of data to come back
+                        var data = await Promise.any( promises );
+                        data = JSON.parse( JSON.stringify( data ) );
+
+                        //if the 15 second timer expires, present the data you have, because you expect no more data
+                        if ( data === "times up" ) return robostats.summary;
+
+                        //otherwise, remove the now-answered query from the list of pending queries
+                        var idx = data[ "index" ];
+
+                        //tell the user what happened
+                        var li = document.createElement( "li" );
+                        li.innerText = data[ "value" ][ "operator_name" ];
+                        $( '.coordinators_queried' ).append( li );
+                        $( '.no_one_queried_yet' ).classList.add( "hidden" );
+
+                        //replace the returned promise with a long timer so that the indexing stays the same
+                        promises.splice( idx, 1, timer( 3_000 ) );
+
+                        //add the operator's response to the info array
+                        robostats.summary.sum = Number( ( robostats.summary.sum + data[ "value" ][ "last_day_volume" ] ).toFixed( 8 ) );
+                        robostats.summary.cum = Number( ( robostats.summary.cum + data[ "value" ][ "lifetime_volume" ] ).toFixed( 8 ) );
+                        robostats.summary.buy = Number( ( robostats.summary.buy + data[ "value" ][ "num_public_buy_orders" ] ).toFixed( 8 ) );
+                        robostats.summary.sel = Number( ( robostats.summary.sel + data[ "value" ][ "num_public_sell_orders" ] ).toFixed( 8 ) );
+                        robostats.prepInfo();
+
+                        //show user what's up
+                        return await loop();
+                    }
+                    await loop();
+                    return robostats.summary;
+                }
+                init();
+            })();
+        </script>
+    </body>
+</html>
