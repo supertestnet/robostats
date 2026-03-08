@@ -31,8 +31,12 @@ Now that I have a source that publishes the latest robosats stats every day it w
 
 Voila! A new robosats tracker that you can point to as evidence that at least one darknet market on the lightning network has meaningful usage. I wonder how to find out if it is used more than most monero-based darkmarkets. 🤔
 
-# Update
+# 2024-08-01 Update
 
 I removed the random noise generator after someone showed me a better source of data. It turns out, robosats coordinators have an endpoint ("api/ticks") where they will tell you about each of the trades they did during a given month, including the amount traded, the currency pair, and the timestamp. So I modified my scraper to collect all of that info, produce "summary files" for every month, and a daily report based on those summary files.
 Someone also sent me "historical" data from the original robosats coordinator who is no longer operative, but he (or a friend) was kind enough to send me a monthly report from his node for each of the months when he was active.
 So the data is much better now, and I added a new "options" button where you can filter the data to only show info about specific currencies. I think it's pretty neat! And I also learned a lot about how to use the chart.js library in the process :D
+
+# 2026-03-08 Update
+
+After a long hiatus where I did not work on this project, I started working on it again...mostly by undoing the previous update. I am once again using the "simpler" method of gathering statistics, with some randomization to make it look less bad. I also modified my python app so that it no longer requires a password, and instead just refuses to work with any endpoints except ones on a whitelist.
